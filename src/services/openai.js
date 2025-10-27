@@ -234,6 +234,16 @@ Aucune phrase, aucun commentaire.
             jsonContent = jsonContent.replaceAll(/```\n?/g, '');
         }
         
+        // Nettoyer les trailing commas (virgules en trop avant } ou ])
+        // Cela corrige les erreurs JSON comme: {"key": "value",} ou ["item",]
+        jsonContent = jsonContent
+            // Retirer virgules avant }
+            .replaceAll(/,(\s*})/g, '$1')
+            // Retirer virgules avant ]
+            .replaceAll(/,(\s*])/g, '$1')
+            // Retirer virgules multiples
+            .replaceAll(/,+/g, ',');
+        
         const data = JSON.parse(jsonContent);
         
         return {
