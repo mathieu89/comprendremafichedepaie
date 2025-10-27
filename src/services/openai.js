@@ -201,9 +201,9 @@ et génère un JSON exhaustif avec la structure ci-dessous.
 Aucune phrase, aucun commentaire.
 `;
 
-        // Appeler l'API OpenAI Vision
+        // Appeler l'API OpenAI Vision avec GPT-5
         const response = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-5",
             messages: [
                 {
                     role: "user",
@@ -218,23 +218,43 @@ Aucune phrase, aucun commentaire.
                     ],
                 },
             ],
-            max_tokens: 2000,
+            max_completion_tokens: 4000,
         });
 
         // Extraire et parser la réponse JSON
         const content = response.choices[0].message.content;
+        console.log("🤖 Réponse brute de GPT-5:", content.substring(0, 200) + "...");
         
-        // Nettoyer le contenu pour s'assurer qu'il ne contient que du JSON
+        // GPT-5 peut retourner du texte avant/après le JSON - extraction robuste
         let jsonContent = content.trim();
         
-        // Retirer les markdown code blocks si présents
-        if (jsonContent.startsWith('```json')) {
-            jsonContent = jsonContent.replaceAll(/```json\n?/g, '').replaceAll(/```\n?$/g, '');
-        } else if (jsonContent.startsWith('```')) {
-            jsonContent = jsonContent.replaceAll(/```\n?/g, '');
+        // Étape 1: Retirer les markdown code blocks si présents
+        if (jsonContent.includes('```json')) {
+            const regex = /```json\s*([\s\S]*?)\s*```/;
+            const match = regex.exec(jsonContent);
+            if (match) {
+                jsonContent = match[1].trim();
+                console.log("📦 JSON extrait d'un code block markdown");
+            }
+        } else if (jsonContent.includes('```')) {
+            const regex = /```\s*([\s\S]*?)\s*```/;
+            const match = regex.exec(jsonContent);
+            if (match) {
+                jsonContent = match[1].trim();
+                console.log("📦 JSON extrait d'un code block");
+            }
         }
         
-        // Nettoyer les trailing commas (virgules en trop avant } ou ])
+        // Étape 2: Extraire le JSON en trouvant le premier { et le dernier } correspondant
+        const firstBrace = jsonContent.indexOf('{');
+        const lastBrace = jsonContent.lastIndexOf('}');
+        
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            jsonContent = jsonContent.substring(firstBrace, lastBrace + 1);
+            console.log("🎯 JSON extrait entre accolades (longueur:", jsonContent.length, "caractères)");
+        }
+        
+        // Étape 3: Nettoyer les trailing commas (virgules en trop avant } ou ])
         // Cela corrige les erreurs JSON comme: {"key": "value",} ou ["item",]
         jsonContent = jsonContent
             // Retirer virgules avant }
@@ -244,7 +264,11 @@ Aucune phrase, aucun commentaire.
             // Retirer virgules multiples
             .replaceAll(/,+/g, ',');
         
+        console.log("✨ JSON nettoyé prêt pour le parsing");
+        console.log("📄 Aperçu:", jsonContent.substring(0, 300) + "...");
+        
         const data = JSON.parse(jsonContent);
+        console.log("✅ JSON parsé avec succès!");
         
         return {
             success: true,
