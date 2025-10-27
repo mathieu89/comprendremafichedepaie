@@ -223,7 +223,9 @@ Aucune phrase, aucun commentaire.
 
         // Extraire et parser la réponse JSON
         const content = response.choices[0].message.content;
-        console.log("🤖 Réponse brute de GPT-5:", content.substring(0, 200) + "...");
+        
+        console.group("🤖 Analyse GPT-5");
+        console.log("Réponse brute complète:", content);
         
         // GPT-5 peut retourner du texte avant/après le JSON - extraction robuste
         let jsonContent = content.trim();
@@ -264,11 +266,11 @@ Aucune phrase, aucun commentaire.
             // Retirer virgules multiples
             .replaceAll(/,+/g, ',');
         
-        console.log("✨ JSON nettoyé prêt pour le parsing");
-        console.log("📄 Aperçu:", jsonContent.substring(0, 300) + "...");
+        console.log("✨ JSON nettoyé (COMPLET - inspectable):", jsonContent);
         
         const data = JSON.parse(jsonContent);
-        console.log("✅ JSON parsé avec succès!");
+        console.log("✅ Données parsées avec succès:", data);
+        console.groupEnd();
         
         return {
             success: true,
