@@ -5,6 +5,54 @@ import { Button } from "@/components/base/buttons/button";
 import { ArrowLeft, FileCheck02 } from "@untitledui/icons";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
+// Composant pour afficher du JSON coloré
+const JsonViewer = ({ data }) => {
+    const jsonString = JSON.stringify(data, null, 2);
+    
+    // Fonction pour colorier le JSON
+    const colorizeJson = (json) => {
+        return json
+            .split('\n')
+            .map((line, index) => {
+                let coloredLine = line;
+                
+                // Colorer les clés (texte entre guillemets suivi de :)
+                coloredLine = coloredLine.replace(
+                    /"([^"]+)":/g,
+                    '<span class="text-blue-400">"$1"</span>:'
+                );
+                
+                // Colorer les valeurs string (texte entre guillemets non suivi de :)
+                coloredLine = coloredLine.replace(
+                    /: "([^"]*)"/g,
+                    ': <span class="text-green-400">"$1"</span>'
+                );
+                
+                // Colorer les nombres
+                coloredLine = coloredLine.replace(
+                    /: (-?\d+\.?\d*)(,?)/g,
+                    ': <span class="text-yellow-400">$1</span>$2'
+                );
+                
+                // Colorer les booléens et null
+                coloredLine = coloredLine.replace(
+                    /: (true|false|null)(,?)/g,
+                    ': <span class="text-purple-400">$1</span>$2'
+                );
+                
+                return (
+                    <div key={index} dangerouslySetInnerHTML={{ __html: coloredLine }} />
+                );
+            });
+    };
+    
+    return (
+        <div className="text-sm font-mono">
+            {colorizeJson(jsonString)}
+        </div>
+    );
+};
+
 // Composant helper pour afficher une catégorie de debug
 const DebugCategory = ({ title, color, employeeData, employerData }) => {
     const hasEmployeeData = employeeData?.lines?.length > 0;
@@ -74,9 +122,20 @@ export const Results = () => {
     const { payslipData, resetData } = usePayslip();
     const [view, setView] = useState("cascade");
     const [expandedItem, setExpandedItem] = useState(null);
+    const [copied, setCopied] = useState(false);
 
     const toggleItem = (index) => {
         setExpandedItem(expandedItem === index ? null : index);
+    };
+
+    const handleCopyJSON = async () => {
+        try {
+            await navigator.clipboard.writeText(JSON.stringify(payslipData, null, 2));
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (error) {
+            console.error("Erreur lors de la copie:", error);
+        }
     };
 
     useEffect(() => {
@@ -383,10 +442,38 @@ export const Results = () => {
                         >
                             Vue Tableau
                         </Button>
+                        <Button
+                            variant={view === "json" ? "primary" : "secondary"}
+                            size="md"
+                            onClick={() => setView("json")}
+                        >
+                            Vue JSON
+                        </Button>
                     </div>
 
-                    {/* Vue Debug */}
-                    {view === "debug" ? (
+                    {/* Vue JSON */}
+                    {view === "json" ? (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xl font-bold text-gray-900">
+                                    Données JSON brutes
+                                </h3>
+                                <Button
+                                    variant={copied ? "primary" : "secondary"}
+                                    size="sm"
+                                    onClick={handleCopyJSON}
+                                >
+                                    {copied ? "✓ Copié !" : "Copier le JSON"}
+                                </Button>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Voici le JSON complet retourné par l'IA après analyse de votre fiche de paie.
+                            </p>
+                            <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto max-h-[600px] overflow-y-auto">
+                                <JsonViewer data={payslipData} />
+                            </div>
+                        </div>
+                    ) : view === "debug" ? (
                         payslipData.employeeContributions && payslipData.employerContributions ? (
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
                                 <h3 className="text-xl font-bold text-gray-900 mb-4">
