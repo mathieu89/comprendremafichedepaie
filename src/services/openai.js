@@ -218,7 +218,7 @@ Aucune phrase, aucun commentaire.
                     ],
                 },
             ],
-            max_completion_tokens: 8000,
+            max_completion_tokens: 16000,
         });
 
         // Extraire et parser la réponse JSON
@@ -267,6 +267,8 @@ Aucune phrase, aucun commentaire.
             .replaceAll(/,+/g, ',');
         
         console.log("✨ JSON nettoyé (COMPLET - inspectable):", jsonContent);
+        console.log("📏 Longueur du JSON:", jsonContent.length, "caractères");
+        console.log("🔚 Se termine par }:", jsonContent.trim().endsWith('}') ? "✅ OUI" : "❌ NON (TRONQUÉ!)");
         
         const data = JSON.parse(jsonContent);
         console.log("✅ Données parsées avec succès:", data);
