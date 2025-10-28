@@ -288,7 +288,6 @@ Aucune phrase, aucun commentaire.
         // Appeler l'API OpenAI Vision avec GPT-5 + tool calls (usage forcé) et fallback JSON strict
         const response = await openai.chat.completions.create({
             model: "gpt-5",
-            temperature: 0,
             messages: [
                 {
                     role: "system",
