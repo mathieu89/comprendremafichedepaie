@@ -201,7 +201,91 @@ et génère un JSON exhaustif avec la structure ci-dessous.
 Aucune phrase, aucun commentaire.
 `;
 
-        // Appeler l'API OpenAI Vision avec GPT-5
+        // Définir le schéma JSON pour forcer une sortie valide via tool calls
+        const categorySchema = {
+            type: "object",
+            required: ["total", "lines"],
+            properties: {
+                total: { type: "number" },
+                lines: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        required: ["name", "amount"],
+                        properties: {
+                            name: { type: "string" },
+                            amount: { type: "number" }
+                        }
+                    }
+                }
+            }
+        };
+
+        const tools = [{
+            type: "function",
+            function: {
+                name: "set_payslip",
+                description: "Return structured French payslip data as validated JSON",
+                parameters: {
+                    type: "object",
+                    required: [
+                        "employeeName",
+                        "period",
+                        "grossSalary",
+                        "netSalaryBeforeTax",
+                        "netSalaryAfterTax",
+                        "employerContributions",
+                        "employeeContributions",
+                        "superGross",
+                        "withholdingTax"
+                    ],
+                    properties: {
+                        employeeName: { type: "string" },
+                        period: { type: "string" },
+                        grossSalary: { type: "number" },
+                        netSalaryBeforeTax: { type: "number" },
+                        netSalaryAfterTax: { type: "number" },
+                        employerContributions: {
+                            type: "object",
+                            required: ["total", "health", "retirement", "family", "unemployment", "cse", "other"],
+                            properties: {
+                                total: { type: "number" },
+                                health: categorySchema,
+                                retirement: categorySchema,
+                                family: categorySchema,
+                                unemployment: categorySchema,
+                                cse: categorySchema,
+                                other: categorySchema
+                            }
+                        },
+                        employeeContributions: {
+                            type: "object",
+                            required: ["total", "health", "retirement", "unemployment", "csgCrds", "other"],
+                            properties: {
+                                total: { type: "number" },
+                                health: categorySchema,
+                                retirement: categorySchema,
+                                unemployment: categorySchema,
+                                csgCrds: categorySchema,
+                                other: categorySchema
+                            }
+                        },
+                        superGross: { type: "number" },
+                        withholdingTax: {
+                            type: "object",
+                            required: ["amount"],
+                            properties: {
+                                amount: { type: "number" },
+                                line: { type: "string" },
+                                rate: { type: "string" }
+                            }
+                        }
+                    }
+                }
+            }
+        }];
+
+        // Appeler l'API OpenAI Vision avec GPT-5 + tool calls
         const response = await openai.chat.completions.create({
             model: "gpt-5",
             messages: [
@@ -211,73 +295,40 @@ Aucune phrase, aucun commentaire.
                         { type: "text", text: prompt },
                         {
                             type: "image_url",
-                            image_url: {
-                                url: base64Data,
-                            },
-                        },
-                    ],
-                },
+                            image_url: { url: base64Data }
+                        }
+                    ]
+                }
             ],
-            max_completion_tokens: 16000,
+            tools,
+            tool_choice: { type: "function", function: { name: "set_payslip" } },
+            max_completion_tokens: 16000
         });
 
-        // Extraire et parser la réponse JSON
-        const content = response.choices[0].message.content;
-        
-        console.group("🤖 Analyse GPT-5");
-        console.log("Réponse brute complète:", content);
-        
-        // GPT-5 peut retourner du texte avant/après le JSON - extraction robuste
-        let jsonContent = content.trim();
-        
-        // Étape 1: Retirer les markdown code blocks si présents
-        if (jsonContent.includes('```json')) {
-            const regex = /```json\s*([\s\S]*?)\s*```/;
-            const match = regex.exec(jsonContent);
-            if (match) {
-                jsonContent = match[1].trim();
-                console.log("📦 JSON extrait d'un code block markdown");
+        // Parser la réponse à partir de l'appel de fonction
+        const choice = response.choices?.[0];
+        const toolCall = choice?.message?.tool_calls?.[0];
+
+        let data;
+        if (toolCall?.function?.arguments) {
+            try {
+                data = JSON.parse(toolCall.function.arguments);
+            } catch {
+                console.error("Arguments JSON invalides (extrait):", toolCall.function.arguments?.slice(0, 500));
+                throw new Error("Arguments JSON invalides retournés par le modèle");
             }
-        } else if (jsonContent.includes('```')) {
-            const regex = /```\s*([\s\S]*?)\s*```/;
-            const match = regex.exec(jsonContent);
-            if (match) {
-                jsonContent = match[1].trim();
-                console.log("📦 JSON extrait d'un code block");
+        } else {
+            // Fallback minimal si pas de tool_call (rare)
+            const content = choice?.message?.content?.trim() || "";
+            try {
+                data = JSON.parse(content);
+            } catch {
+                console.error("Aucune tool_call et contenu non JSON (extrait):", content.slice(0, 500));
+                throw new Error("Aucune tool_call retournée par le modèle");
             }
         }
-        
-        // Étape 2: Extraire le JSON en trouvant le premier { et le dernier } correspondant
-        const firstBrace = jsonContent.indexOf('{');
-        const lastBrace = jsonContent.lastIndexOf('}');
-        
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-            jsonContent = jsonContent.substring(firstBrace, lastBrace + 1);
-            console.log("🎯 JSON extrait entre accolades (longueur:", jsonContent.length, "caractères)");
-        }
-        
-        // Étape 3: Nettoyer les trailing commas (virgules en trop avant } ou ])
-        // Cela corrige les erreurs JSON comme: {"key": "value",} ou ["item",]
-        jsonContent = jsonContent
-            // Retirer virgules avant }
-            .replaceAll(/,(\s*})/g, '$1')
-            // Retirer virgules avant ]
-            .replaceAll(/,(\s*])/g, '$1')
-            // Retirer virgules multiples
-            .replaceAll(/,+/g, ',');
-        
-        console.log("✨ JSON nettoyé (COMPLET - inspectable):", jsonContent);
-        console.log("📏 Longueur du JSON:", jsonContent.length, "caractères");
-        console.log("🔚 Se termine par }:", jsonContent.trim().endsWith('}') ? "✅ OUI" : "❌ NON (TRONQUÉ!)");
-        
-        const data = JSON.parse(jsonContent);
-        console.log("✅ Données parsées avec succès:", data);
-        console.groupEnd();
-        
-        return {
-            success: true,
-            data: data,
-        };
+
+        return { success: true, data };
     } catch (error) {
         console.error("Erreur lors de l'extraction des données:", error);
         return {
