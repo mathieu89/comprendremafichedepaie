@@ -285,23 +285,27 @@ Aucune phrase, aucun commentaire.
             }
         }];
 
-        // Appeler l'API OpenAI Vision avec GPT-5 + tool calls
+        // Appeler l'API OpenAI Vision avec GPT-5 + tool calls (usage forcé) et fallback JSON strict
         const response = await openai.chat.completions.create({
             model: "gpt-5",
+            temperature: 0,
             messages: [
+                {
+                    role: "system",
+                    content:
+                        "You MUST call the function set_payslip with fully-populated, strictly-typed arguments. Do not write free text."
+                },
                 {
                     role: "user",
                     content: [
                         { type: "text", text: prompt },
-                        {
-                            type: "image_url",
-                            image_url: { url: base64Data }
-                        }
+                        { type: "image_url", image_url: { url: base64Data } }
                     ]
                 }
             ],
             tools,
-            tool_choice: { type: "function", function: { name: "set_payslip" } },
+            tool_choice: "required",
+            response_format: { type: "json_object" },
             max_completion_tokens: 16000
         });
 
@@ -318,8 +322,8 @@ Aucune phrase, aucun commentaire.
                 throw new Error("Arguments JSON invalides retournés par le modèle");
             }
         } else {
-            // Fallback minimal si pas de tool_call (rare)
-            const content = choice?.message?.content?.trim() || "";
+            // Fallback: grâce à response_format: json_object, le content est garanti JSON
+            const content = choice?.message?.content?.trim() || "{}";
             try {
                 data = JSON.parse(content);
             } catch {
