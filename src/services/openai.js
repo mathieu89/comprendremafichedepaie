@@ -31,7 +31,7 @@ export const pdfToImage = async (file) => {
         const page = await pdf.getPage(1); // Première page
 
         // Définir l'échelle pour une bonne qualité
-        const scale = 2;
+        const scale = 1.5;
         const viewport = page.getViewport({ scale });
 
         // Créer un canvas
@@ -288,6 +288,7 @@ Aucune phrase, aucun commentaire.
         // Appeler l'API OpenAI Vision avec GPT-5 + tool calls (usage forcé) et fallback JSON strict
         const response = await openai.chat.completions.create({
             model: "gpt-5-mini",
+            reasoning_effort: "low",
             messages: [
                 {
                     role: "system",
