@@ -71,14 +71,20 @@ const DebugCategory = ({ title, color, employeeData, employerData }) => {
                         Part salarié : {employeeData.total?.toFixed(2)} €
                     </p>
                     <div className="bg-white rounded-lg divide-y divide-gray-100">
-                        {employeeData.lines.map((line, idx) => (
-                            <div key={idx} className="flex justify-between items-center p-2">
-                                <span className="text-sm text-gray-700">{line.name}</span>
-                                <span className="text-sm font-semibold text-gray-900">
-                                    {line.amount?.toFixed(2)} €
-                                </span>
-                            </div>
-                        ))}
+                        {employeeData.lines.map((line, idx) => {
+                            // Gestion de la rétrocompatibilité (objet vs tableau)
+                            const name = Array.isArray(line) ? line[0] : line.name;
+                            const amount = Array.isArray(line) ? line[1] : line.amount;
+                            
+                            return (
+                                <div key={idx} className="flex justify-between items-center p-2">
+                                    <span className="text-sm text-gray-700">{name}</span>
+                                    <span className="text-sm font-semibold text-gray-900">
+                                        {amount?.toFixed(2)} €
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -90,14 +96,20 @@ const DebugCategory = ({ title, color, employeeData, employerData }) => {
                         Part employeur : {employerData.total?.toFixed(2)} €
                     </p>
                     <div className="bg-white rounded-lg divide-y divide-gray-100">
-                        {employerData.lines.map((line, idx) => (
-                            <div key={idx} className="flex justify-between items-center p-2">
-                                <span className="text-sm text-gray-700">{line.name}</span>
-                                <span className="text-sm font-semibold text-gray-900">
-                                    {line.amount?.toFixed(2)} €
-                                </span>
-                            </div>
-                        ))}
+                        {employerData.lines.map((line, idx) => {
+                            // Gestion de la rétrocompatibilité (objet vs tableau)
+                            const name = Array.isArray(line) ? line[0] : line.name;
+                            const amount = Array.isArray(line) ? line[1] : line.amount;
+
+                            return (
+                                <div key={idx} className="flex justify-between items-center p-2">
+                                    <span className="text-sm text-gray-700">{name}</span>
+                                    <span className="text-sm font-semibold text-gray-900">
+                                        {amount?.toFixed(2)} €
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

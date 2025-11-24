@@ -137,28 +137,28 @@ et génère un JSON exhaustif avec la structure ci-dessous.
     "health": {
       "total": SOMME des lignes santé employeur,
       "lines": [
-        {"name": "nom exact de la ligne", "amount": montant}
+        ["nom exact de la ligne", montant]
       ]
     },
     "retirement": {
       "total": SOMME des lignes retraite employeur,
-      "lines": [{"name": "nom exact de la ligne", "amount": montant}]
+      "lines": [["nom exact de la ligne", montant]]
     },
     "family": {
       "total": SOMME de la ligne Famille,
-      "lines": [{"name": "nom exact de la ligne", "amount": montant}]
+      "lines": [["nom exact de la ligne", montant]]
     },
     "unemployment": {
       "total": SOMME des lignes chômage employeur,
-      "lines": [{"name": "nom exact de la ligne", "amount": montant}]
+      "lines": [["nom exact de la ligne", montant]]
     },
     "cse": {
       "total": SOMME des lignes CSE employeur,
-      "lines": [{"name": "nom exact", "amount": montant}]
+      "lines": [["nom exact", montant]]
     },
     "other": {
       "total": SOMME des autres lignes employeur (formation, mobilité, ADESATT, taxes, restauration, etc.),
-      "lines": [{"name": "nom exact de la ligne", "amount": montant}]
+      "lines": [["nom exact de la ligne", montant]]
     }
   },
 
@@ -166,23 +166,23 @@ et génère un JSON exhaustif avec la structure ci-dessous.
     "total": SOMME de toutes les cotisations salariales,
     "health": {
       "total": SOMME santé salarié,
-      "lines": [{"name": "nom exact de la ligne", "amount": montant}]
+      "lines": [["nom exact de la ligne", montant]]
     },
     "retirement": {
       "total": SOMME retraite salarié,
-      "lines": [{"name": "nom exact de la ligne", "amount": montant}]
+      "lines": [["nom exact de la ligne", montant]]
     },
     "unemployment": {
       "total": SOMME chômage salarié (exclure “Chômage” si absent de la colonne “A déduire”),
-      "lines": [{"name": "nom exact de la ligne", "amount": montant}]
+      "lines": [["nom exact de la ligne", montant]]
     },
     "csgCrds": {
       "total": SOMME CSG/CRDS,
-      "lines": [{"name": "nom exact", "amount": montant}]
+      "lines": [["nom exact", montant]]
     },
     "other": {
       "total": SOMME autres salarié (Titres restaurant, Cantine, Repas, etc.),
-      "lines": [{"name": "nom exact", "amount": montant}]
+      "lines": [["nom exact", montant]]
     }
   },
 
@@ -210,12 +210,13 @@ Aucune phrase, aucun commentaire.
                 lines: {
                     type: "array",
                     items: {
-                        type: "object",
-                        required: ["name", "amount"],
-                        properties: {
-                            name: { type: "string" },
-                            amount: { type: "number" }
-                        }
+                        type: "array",
+                        prefixItems: [
+                            { type: "string" }, // name
+                            { type: "number" }  // amount
+                        ],
+                        minItems: 2,
+                        maxItems: 2
                     }
                 }
             }
